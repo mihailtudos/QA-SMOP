@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>{{ config('app.name', 'Laravel') }}</title>
+
+    <!-- Scripts -->
+    <script src="{{ asset('js/app.js') }}" defer></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+    <!-- Fonts -->
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet">
+
+    <!-- Styles -->
+    <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/style.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/datepicker.min.css') }}" rel="stylesheet" type="text/css">
+    <script src="{{ asset('js/datepicker.min.js') }}"></script>
+
+    <!-- Include English language -->
+    <script src="{{ asset('js/i18n/datepicker.en.js') }}"></script>
+</head>
+<body>
+    {{--cookie concent needed on all pages unless the user acknowledges it--}}
+    @include('cookieConsent::index')
+    <div id="app">
+
+        {{--navigation bar needed on all pages--}}
+        <nav class="navbar navbar-expand-md navbar-light shadow-sm">
+            <div class="container">
+
+                <a class="navbar-brand text-white font-weight-bold" href="{{ url('/') }}">
+                    {{ config('app.name', 'QA-SMOP') }}
+                </a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <!-- Left Side Of Navbar -->
+                    <ul class="navbar-nav mr-auto">
+
+                    </ul>
+
+                    <!-- Right Side Of Navbar -->
+                    <ul class="navbar-nav ml-auto">
+
+                        <!-- Authentication Links -->
+                        @guest
+                            <li class="nav-item ">
+                                <a class="nav-link text-white font-weight-bold" href="{{ route('login') }}">{{ __('Login') }}</a>
+                            </li>
+                        @else
+                        <!-- dropw down for emails -->
+
+                            <li class="nav-item dropdown ">
+                               @include('partials.emailDrop')
+                            </li>
+
+                            <!-- drop down for logout,registration, etc -->
+                            <li class="nav-item dropdown ">
+                                <a id="navbarDropdown" class="nav-link text-white dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
+                                    {{ Auth::user()->name }} <span class="caret"></span>
+                                </a>
+
+                                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                                    @include('partials.dropDownMenu')
+                                </div>
+                            </li>
+                        @endguest
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        {{--the main content section where pages will be displayed--}}
+        <main class="py-4">
+            <div class="container">
+                {{-- an alert message avalable in all pages to sent user a feedback upon
+                //completion of some activities (user create, user updated, etc.)--}}
+                @include('partials.alerts')
+                {{--the content of the pages that needs to be displyed using the layout--}}
+                @yield('content')
+            </div>
+        </main>
+    </div>
+
+    {{--    ajax requiest to facilitate the comunication between
+            the server and QA-SMOP pages
+     --}}
+    <script>
+        $(document).ready(function(){
+
+            $('.dynamic').change(function(){
+
+                if($(this).val() != '')
+                {
+                    var select = $(this).attr("id");
+                    var value = $(this).val();
+                    var dependent = $(this).data('dependent');
+                    var students = $("#supervisor").data('dependent');
+                    var _token = $('input[name="_token"]').val();
+
+
+                    if(students == 'supervisor'){
+
+                        $.ajax({
+                            url:"{{ route('admin.projectscontroller.fetch') }}",
+                            method:"POST",
+                            data:{select:select, value:value, _token:_token, dependent:dependent},
+                            success:function(result)
+                            {
+                                $('#'+dependent).html(result);
+                            }
+
+                        })
+                    } else {
+                        dependent = 'supervisor';
+                        students = 'student';
+
+                        $.ajax({
+                            url:"{{ route('admin.emailscontroller.fetch') }}",
+                            method:"POST",
+
+                            data:{select:select, value:value, _token:_token, dependent:dependent, students:students},
+
+                            success:function(result)
+                            {
+                                $('#'+students).html(result['students']);
+                                $('#'+dependent).html(result['supervisors']);
+                            }
+
+                        })
+                    }
+
+
+
+
+
+                }
+            });
+
+            $('#studyField').change(function(){
+                $('#supervisor').val('');
+                // $('#city').val('');
+            });
+
+            // $('#supervisor').change(function(){
+            //     // $('#city').val('');
+            // });
+            //
+            // $('#student').change(function(){
+            //     // $('#city').val('');
+            // });
+
+        });
+
+    </script>
+    <script>
+        function addCoordinator() {
+            var studentsCheck = document.getElementById("studentsCheck");
+            var coordinatorCheck  = document.getElementById("coordinatorCheck");
+            var errorMessageDestination  = document.getElementById("errorMessageDestination");
+            var students = document.getElementById("students");
+            var coordinatorEmail = $("#coordinatorEmail").val();
+
+
+            if (studentsCheck.checked == true && coordinatorCheck.checked == false){
+                students.style.display = "block";
+                $("#students").attr("required", true);
+                coordinator.style.display = "none";
+                $("#coordinator").removeAttr("required").val('');
+            } else if (studentsCheck.checked == true && coordinatorCheck.checked == true){
+                students.style.display = "block";
+                $('#coordinator').val(coordinatorEmail).attr("required", true).css("display", "block");
+            }   else if (studentsCheck.checked == false && coordinatorCheck.checked == true){
+                $('#coordinator').val(coordinatorEmail).attr("required", true).css("display", "block");
+                students.style.display = "none";
+                $("#students").removeAttr("required");
+                $("select").val([]);
+            } else {
+                $('#coordinator').val('').removeAttr("required").css("display", "none");
+                $("#students").removeAttr("required");
+                students.style.display = "none";
+                $("select").val([]);
+            }
+
+
+        }
+
+    </script>
+    <script src="{{ asset('js/scripts.js') }}"></script>
+</body>
+</html>
